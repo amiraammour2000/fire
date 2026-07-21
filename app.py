@@ -137,13 +137,14 @@ st.markdown(kpi_html, unsafe_allow_html=True)
 
 col_map, col_cmd = st.columns([3.5, 1.5])
 
-# ================= CARTE =================
-with col_map:
+    # ================= CARTE =================
     m = folium.Map(location=[36.35, 3.05], zoom_start=7, control_scale=True, tiles=None, zoom_control=False)
     
     folium.TileLayer(tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr='© OSM © CARTO', name='Commandement Nuit', overlay=False, control=True).add_to(m)
     folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='© Esri', name='Satellite IR', overlay=False, control=True).add_to(m)
-        Draw(export=True, draw_options={'polyline': False, 'circle': False, 'marker': True, 'circlemarker': False}).add_to(m)
+    
+    # Attention : bien aligné avec les folium.TileLayer au-dessus (4 espaces au total)
+    Draw(export=True, draw_options={'polyline': False, 'circle': False, 'marker': True, 'circlemarker': False}).add_to(m)
     
     # Création d'un objet Tuile explicite pour la MiniMap afin de respecter la règle d'attribution de Folium
     minimap_tile_layer = folium.TileLayer(
