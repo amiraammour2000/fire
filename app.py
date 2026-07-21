@@ -21,19 +21,15 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap');
 
-    /* Fond et typographie globale */
     .main, .stSidebar { background-color: #050a14; color: #cfd8dc; font-family: 'Rajdhani', sans-serif; }
     h1, h2, h3, h4 { font-family: 'Share Tech Mono', monospace; color: #00e5ff !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.5); }
     
-    /* Masquer les éléments par défaut de Streamlit */
     #MainMenu, footer, header { visibility: hidden; }
     
-    /* Barres de défilement personnalisées */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #0d1b2a; }
     ::-webkit-scrollbar-thumb { background: #1b263b; border-radius: 3px; }
 
-    /* KPI Cards en haut */
     .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 20px; }
     .kpi-card {
         background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
@@ -47,7 +43,6 @@ st.markdown("""
     .alert-orange .kpi-value { color: #ff9100; text-shadow: 0 0 10px rgba(255, 145, 0, 0.7); }
     .alert-green .kpi-value { color: #00e676; text-shadow: 0 0 10px rgba(0, 230, 118, 0.7); }
 
-    /* Terminal de Logs */
     .tactical-log {
         background-color: #000000; border: 1px solid #263238; border-radius: 5px;
         height: 200px; overflow-y: auto; padding: 10px; font-family: 'Share Tech Mono', monospace; font-size: 12px;
@@ -58,7 +53,6 @@ st.markdown("""
     .log-alert { color: #ff1744; }
     .log-success { color: #00e676; }
 
-    /* Widgets */
     .stButton>button { border: 1px solid #00e5ff; background-color: rgba(0, 229, 255, 0.1); color: #00e5ff; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
     .stButton>button:hover { background-color: #00e5ff; color: #000000; box-shadow: 0 0 20px #00e5ff; }
     div[data-testid="stMetricValue"] { font-family: 'Share Tech Mono'; font-size: 20px; color: #ffffff; background-color: #0d1b2a; padding: 10px; border-radius: 5px; border-left: 4px solid #00e5ff; }
@@ -74,13 +68,13 @@ if 'fire_grid' not in st.session_state: st.session_state.fire_grid = None
 if 'elevation' not in st.session_state: st.session_state.elevation = None
 if 'iot_tracks' not in st.session_state: st.session_state.iot_tracks = []
 if 'tactical_logs' not in st.session_state: st.session_state.tactical_logs = ["[SYSTEM] Initialisation du poste de commandement CODIS...", "[SYSTEM] Connexion au réseau SIG sécurisée."]
+if 'wind_dir' not in st.session_state: st.session_state.wind_dir = 210
 
 def add_log(message, log_type="SYSTEM"):
     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
     st.session_state.tactical_logs.append(f"<div class='log-entry'><span class='log-time'>[{timestamp}]</span> <span class='log-{log_type.lower()}'>{message}</span></div>")
     if len(st.session_state.tactical_logs) > 50: st.session_state.tactical_logs.pop(0)
 
-# Flotte mockée ultra-réaliste
 FLEET_DATA = [
     {"id": "CN-301", "type": "CL-415", "status": "Disponible", "capacity": "6137 L"},
     {"id": "CN-302", "type": "CL-415", "status": "En Transit", "capacity": "6137 L"},
@@ -95,7 +89,6 @@ FLEET_DATA = [
 st.markdown("<h1 style='margin-bottom:0px;'>🇩🇿 CENTRE OPERATIONNEL DE DEFENSE DES FORETS</h1>", unsafe_allow_html=True)
 st.markdown("<p style='color:#546e7a; margin-top:-10px; font-size:14px;'>SYSTEME DE COMMANDMENT C4ISR | ARCHITECTURE DISTRIBUEE | NIVEAU CLASSIFICATION: CONFIDENTIEL</p>", unsafe_allow_html=True)
 
-# --- BARRE DE KPIs TACTIQUES ---
 db = GISDatabaseManager()
 zones = db.fetch_active_sectors()
 active_fires = len([z for z in zones if z['priority'] == 'Critique'])
@@ -105,27 +98,43 @@ kpi_html = f"""
 <div class="kpi-grid">
     <div class="kpi-card alert-red"><div class="kpi-value">{active_fires}</div><div class="kpi-label">Foyers Critiques Actifs</div></div>
     <div class="kpi-card alert-green"><div class="kpi-value">{available_planes}</div><div class="kpi-label">Vecteurs Aériens Disponibles</div></div>
-    <div class="kpi-card alert-orange"><div class="kpi-value">{np.random.randint(35, 65)} km/h</div><div class="kpi-label">Rafales de Vent Maximales</div></div>
+    <div class="kpi-card alert-orange"><div class="kpi-value">45 km/h</div><div class="kpi-label">Rafales de Vent Maximales</div></div>
     <div class="kpi-card"><div class="kpi-value">12.5°C</div><div class="kpi-label">Température Ambiante</div></div>
     <div class="kpi-card alert-red"><div class="kpi-value">EXTREME</div><div class="kpi-label">Indice de Risque Meteo</div></div>
 </div>
 """
 st.markdown(kpi_html, unsafe_allow_html=True)
 
-# --- LAYOUT PRINCIPAL (CARTE + COMMANDE) ---
 col_map, col_cmd = st.columns([3.5, 1.5])
 
 with col_map:
-    # --- CARTE FOLIUM AVANCÉE ---
-    m = folium.Map(location=[36.35, 3.05], zoom_start=7, control_scale=True, tiles="CartoDB dark_all")
+    # --- CARTE FOLIUM AVANCÉE (CORRECTION ATTRIBUTION) ---
+    # On initialise sans tuiles (tiles=None) pour éviter le bug de validation de Folium
+    m = folium.Map(location=[36.35, 3.05], zoom_start=7, control_scale=True, tiles=None, zoom_control=False)
     
-    # Couches
-    folium.TileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='Esri Satellite', name='Satellite IR', overlay=False, control=True).add_to(m)
+    # AJOUT MANUEL DES TUILES AVEC ATTRIBUTIONS LEGALES EXPLICITES
+    folium.TileLayer(
+        tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        name='Commandement Nuit',
+        overlay=False,
+        control=True
+    ).add_to(m)
+
+    folium.TileLayer(
+        tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attr='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS',
+        name='Satellite IR',
+        overlay=False,
+        control=True
+    ).add_to(m)
+
+    # Outils Tactiques
     Draw(export=True, draw_options={'polyline': False, 'circle': False, 'marker': False, 'circlemarker': False}).add_to(m)
     MiniMap(toggle_display=True, position="bottomright").add_to(m)
     Fullscreen(position="topleft").add_to(m)
 
-    # Flèche de Vent Dynamique (Centrée sur le théâtre)
+    # Flèche de Vent Dynamique
     wind_icon = folium.DivIcon(html=f"""
         <div style="font-size: 40px; color: #00e5ff; transform: rotate({st.session_state.get('wind_dir', 180)}deg); text-shadow: 0 0 10px cyan;">
             ➤
@@ -149,13 +158,12 @@ with col_map:
     if st.session_state.fire_grid is not None:
         sim = PhysicalFireSimulator(36.35, 3.05, rows=st.session_state.fire_grid.shape[0], cols=st.session_state.fire_grid.shape[1])
         
-        # Scénario Réel
         fire_coords = sim.get_fire_geojson(st.session_state.fire_grid)
         if fire_coords:
             HeatMap(fire_coords, radius=15, blur=10, gradient={0.4: '#ff9100', 0.7: '#ff1744', 1.0: '#d50000'}, name='🔥 Scénario Réel', overlay=True).add_to(m)
             
-            # Scénario Pessimiste (Vent +30%, Humidité -20%) - Affiché en Violet
-            pessimist_grid = sim.step_propagation(st.session_state.fire_grid, st.session_state.elevation, wind_speed*1.3, wind_dir, max(5, moisture*0.8))
+            wind_speed = 65 # Valeur par défaut pour la simulation de fond si non encore modifiée
+            pessimist_grid = sim.step_propagation(st.session_state.fire_grid, st.session_state.elevation, wind_speed*1.3, st.session_state['wind_dir'], max(5, 15*0.8))
             pessimist_coords = sim.get_fire_geojson(pessimist_grid)
             HeatMap(pessimist_coords, radius=20, blur=15, gradient={0.4: '#aa00ff', 1.0: '#6200ea'}, name='⚠️ Scénario Pessimiste', overlay=True).add_to(m)
 
@@ -218,7 +226,7 @@ st.markdown("<h4 style='margin-bottom:5px;'>📡 JOURNAL DES ÉVÉNEMENTS TACTIQ
 log_html = f"<div class='tactical-log'>{''.join(st.session_state.tactical_logs)}</div>"
 st.markdown(log_html, unsafe_allow_html=True)
 
-# --- THREAD WEBSOCKET (Silencieux en arrière-plan) ---
+# --- THREAD WEBSOCKET ---
 async def fetch_iot_data():
     try:
         async with websockets.connect("ws://localhost:8765") as websocket:
