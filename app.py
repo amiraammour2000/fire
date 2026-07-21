@@ -143,9 +143,16 @@ with col_map:
     
     folium.TileLayer(tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr='© OSM © CARTO', name='Commandement Nuit', overlay=False, control=True).add_to(m)
     folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='© Esri', name='Satellite IR', overlay=False, control=True).add_to(m)
+        Draw(export=True, draw_options={'polyline': False, 'circle': False, 'marker': True, 'circlemarker': False}).add_to(m)
     
-    Draw(export=True, draw_options={'polyline': False, 'circle': False, 'marker': True, 'circlemarker': False}).add_to(m)
-    MiniMap(toggle_display=True, position="bottomright", tile_layer='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').add_to(m)
+    # Création d'un objet Tuile explicite pour la MiniMap afin de respecter la règle d'attribution de Folium
+    minimap_tile_layer = folium.TileLayer(
+        tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        name='MiniMap Dark'
+    )
+    MiniMap(toggle_display=True, position="bottomright", tile_layer=minimap_tile_layer).add_to(m)
+    
     Fullscreen(position="topleft").add_to(m)
 
     # Flèche de vent
