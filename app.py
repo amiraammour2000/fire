@@ -137,16 +137,14 @@ st.markdown(kpi_html, unsafe_allow_html=True)
 
 col_map, col_cmd = st.columns([3.5, 1.5])
 
-    # ================= CARTE =================
+with col_map:
     m = folium.Map(location=[36.35, 3.05], zoom_start=7, control_scale=True, tiles=None, zoom_control=False)
     
     folium.TileLayer(tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr='© OSM © CARTO', name='Commandement Nuit', overlay=False, control=True).add_to(m)
     folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='© Esri', name='Satellite IR', overlay=False, control=True).add_to(m)
     
-    # Attention : bien aligné avec les folium.TileLayer au-dessus (4 espaces au total)
     Draw(export=True, draw_options={'polyline': False, 'circle': False, 'marker': True, 'circlemarker': False}).add_to(m)
     
-    # Création d'un objet Tuile explicite pour la MiniMap afin de respecter la règle d'attribution de Folium
     minimap_tile_layer = folium.TileLayer(
         tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -156,21 +154,16 @@ col_map, col_cmd = st.columns([3.5, 1.5])
     
     Fullscreen(position="topleft").add_to(m)
 
-    # Flèche de vent
     wind_icon = folium.DivIcon(html=f"<div style='font-size: 40px; color: #00e5ff; transform: rotate({st.session_state.get('wind_dir', 180)}deg); text-shadow: 0 0 10px cyan;'>➤</div>", icon_size=(40, 40), icon_anchor=(20, 20))
     folium.Marker([36.35, 3.05], icon=wind_icon).add_to(m)
 
-    # Zones SIG
     for zone in zones:
         color = "darkred" if zone['priority'] == 'Critique' else "orange"
         folium.Marker([zone['lat'], zone['lon']], popup=f"<b>{zone['name']}</b><br>Propagation: {zone['spread_rate']} km/h", icon=folium.Icon(color=color, icon="fire", prefix="fa")).add_to(m)
 
-    # Vecteur de propagation et Heatmap
     if st.session_state.fire_grid is not None and st.session_state.spread_vector:
         vec = st.session_state.spread_vector
-        # Ligne principale de propagation
         folium.PolyLine(locations=[vec['start'], vec['end']], color='#ff1744', weight=6, opacity=0.8, popup="Axe de propagation principal").add_to(m)
-        # Marqueur de Tête de front
         folium.Marker(location=vec['end'], icon=folium.DivIcon(html="<div style='background:red; width:10px; height:10px; border-radius:50%; box-shadow: 0 0 10px red;'></div>", icon_size=(10,10), icon_anchor=(5,5))).add_to(m)
         
         sim = PhysicalFireSimulator(36.35, 3.05, rows=st.session_state.fire_grid.shape[0], cols=st.session_state.fire_grid.shape[1])
@@ -180,7 +173,6 @@ col_map, col_cmd = st.columns([3.5, 1.5])
 
     folium.LayerControl().add_to(m)
     
-    # Récupération des interactions carte (Clics de l'opérateur)
     map_data = st_folium(m, width="100%", height=580)
 
 # ================= PANNEAU DE COMMANDE =================
