@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  postgis:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_USER: codis_admin
+      POSTGRES_PASSWORD: secure_password
+      POSTGRES_DB: codis_geo_db
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web_app:
+    build: .
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - DATABASE_URL=dbname=codis_geo_db user=codis_admin password=secure_password host=postgis port=5432
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+      - postgis
+
+  celery_worker:
+    build: .
+    command: celery -A celery_worker.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=dbname=codis_geo_db user=codis_admin password=secure_password host=postgis port=5432
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+
+  iot_server:
+    build: .
+    command: python iot_websocket_server.py
+    ports:
+      - "8765:8765"
+    depends_on:
+      - redis
+
+volumes:
+  postgis_data:
