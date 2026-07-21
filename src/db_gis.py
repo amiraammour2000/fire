@@ -53,18 +53,18 @@ class GISDatabaseManager:
                 conn.close()
 
     def fetch_active_sectors(self):
-        """ Récupère les secteurs d'intervention depuis PostGIS ou retourne un Mock """
+        """ Récupère les secteurs d'intervention depuis PostGIS ou retourne un Mock Algérie """
         conn = self.get_connection()
         
-        # Si pas de connexion DB, on retourne les données de simulation (Mock)
         if not conn:
+            # Données géospatiales réalistes pour le Nord de l'Algérie
             return [
-                {"id": 1, "name": "Secteur Massif Est", "lat": 43.6100, "lon": 7.0600, "priority": "Critique", "spread_rate": 8.5},
-                {"id": 2, "name": "Vallée Sud-Ouest", "lat": 43.5950, "lon": 7.0450, "priority": "Moyenne", "spread_rate": 4.2},
-                {"id": 3, "name": "Crête Nord", "lat": 43.6150, "lon": 7.0500, "priority": "Haute", "spread_rate": 6.8}
+                {"id": 1, "name": "Massif de Kabylie (Tizi Ouzou)", "lat": 36.7100, "lon": 4.0500, "priority": "Critique", "spread_rate": 9.2},
+                {"id": 2, "name": "Forêt de la Mitidja (Alger)", "lat": 36.5500, "lon": 2.9500, "priority": "Haute", "spread_rate": 7.5},
+                {"id": 3, "name": "Parc National de Chréa (Blida)", "lat": 36.4300, "lon": 2.8800, "priority": "Moyenne", "spread_rate": 5.1},
+                {"id": 4, "name": "Monts de l'Aurès (Batna)", "lat": 35.5500, "lon": 6.1700, "priority": "Critique", "spread_rate": 10.1}
             ]
             
-        # Si la DB est connectée, on fait la vraie requête spatiale
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT id, name, ST_Y(geom) as lat, ST_X(geom) as lon, priority, spread_rate FROM sectors;")
@@ -73,9 +73,8 @@ class GISDatabaseManager:
             conn.close()
             return [{"id": r[0], "name": r[1], "lat": r[2], "lon": r[3], "priority": r[4], "spread_rate": r[5]} for r in rows]
         except Exception as e:
-            # En cas d'erreur de requête (ex: table inexistante), on retourne le Mock
             print(f"Erreur de requête SQL: {e}")
             return [
-                {"id": 1, "name": "Secteur Massif Est", "lat": 43.6100, "lon": 7.0600, "priority": "Critique", "spread_rate": 8.5},
-                {"id": 2, "name": "Vallée Sud-Ouest", "lat": 43.5950, "lon": 7.0450, "priority": "Moyenne", "spread_rate": 4.2}
+                {"id": 1, "name": "Massif de Kabylie", "lat": 36.7100, "lon": 4.0500, "priority": "Critique", "spread_rate": 9.2},
+                {"id": 2, "name": "Forêt de la Mitidja", "lat": 36.5500, "lon": 2.9500, "priority": "Haute", "spread_rate": 7.5}
             ]
